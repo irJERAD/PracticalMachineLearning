@@ -45,7 +45,6 @@ library(randomForest)
 # also known as Parallel computing, we use the foreach and doParallel libraries
 library(foreach)
 library(doParallel)
-library(Hmisc)
 set.seed(1111)
 ```
 
@@ -56,7 +55,7 @@ trainSet <- read.csv("./data/trainingSet.csv", na.strings=c("#DIV/0!"))
 ```
 
 Quickly review the data as such
-```{r data_summary}
+```{r data_summary, eval=FALSE}
 # summary immediately shows many NA values 
 # and the first column X appears to be an index column
 summar(trainSet)
@@ -68,7 +67,7 @@ sum(colSums(is.na(trainSet)) == 0)
 
 With more than half the variables completely filled it makes sense to stick to these as our predictors and thus remove any incompleted columns to avoid a few observations heavily affecting the weight it holds on a particular classification.
 Additionally, common sense confirms that columns such as X, an index column, user_name, and a few others provide us with absolutely no predictive value and could only lead toward miss classification and incorrectly fitting to inappropriate variables
-```{r compress_data}
+```{r compress_data, warning=FALSE}
 # coerce remaining values into numeric for ease of computing and comparing model
 for(i in c(1:(ncol(trainSet)-1))) {
         trainSet[,i] = as.numeric(as.character(trainSet[,i]))
