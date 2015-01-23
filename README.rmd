@@ -100,8 +100,8 @@ test <- trainSet[-inTrain, ]
 ##Train Random Forests models
 With such a large combination of variables and factors and because random forests become so powerful in reducing the variability of their predictions with the use of more trees and forests, it only makes sense to do such a cumbersome and computationally heavy tasks across multiple cores.
 The foreach package as described by Steve Weston went a long way in helping me harness the grammar of executing functions for parallel computation
-please see (this page)[http://cran.r-project.org/web/packages/foreach/vignettes/foreach.pdf] for more information on how I learned to use this package
-The doParallel package is a "parallel backend" for the foreach package - as described by author Steve Weston and Rich Calaway. If you would like to know more about the doParallel package please (check here)[http://cran.r-project.org/web/packages/doParallel/vignettes/gettingstartedParallel.pdf] for a simple introduction to doParallel and how it works with foreach
+please see [this page](http://cran.r-project.org/web/packages/foreach/vignettes/foreach.pdf) for more information on how I learned to use this package
+The doParallel package is a "parallel backend" for the foreach package - as described by author Steve Weston and Rich Calaway. If you would like to know more about the doParallel package please [check here](http://cran.r-project.org/web/packages/doParallel/vignettes/gettingstartedParallel.pdf) for a simple introduction to doParallel and how it works with foreach
 ```{r}
 # this command will allocate half the computers total number of cores
 registerDoParallel()
