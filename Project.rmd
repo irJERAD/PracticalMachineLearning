@@ -4,13 +4,23 @@ author: "Jerad Acosta"
 date: "January 22, 2015"
 output: html_document
 ---
+##Goal
+###The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set.
 
+##Strategy
+- We shall being by acquiring and loading our data.
+- Then a quick overview of the data with reflection to our primary goal should allow us to focus on proper feature selection or creation.
+- Then, with a proper idea as to the the size and scope of our data with respect to our goal, we can begin the process of removing variables or observations which appear to be corrupted with the purpose of fitting our model to as close to real-world measurements and applicable resources.
+- With out data set reduced, managing and manipulating it should be a much easier task, as will interpreting the meaning of our model.
+- While this report will only show the final and most accurate and understandable model, there will have been many attempts from basics of plotting potential predictors, to creating new predictors through Principle Component analysis; additionally models from basic linear regression to trees and random forests all attempting methods of bagging and boosting will be tried.
+However, for the sake of brevity, only the final model and its production will be shown here with perhaps a few nods to why a different attempt either failed or was not selected.
+
+##Acquiring, summarizing and compressing the data set
 ```{r set_local_wd}
 setwd('/Users/irJERAD/Courses/Coursera Repo/(C)Practical Machine Learning/PracticalMachineLearning')
 ```
 
-Download training and testing datasets and load them into memory
-creating any necessary directories
+Download training and testing datasets creating any necessary directories
 ```{r download_data}
 # check if data directory exists
 if(!file.exists("data")) {
@@ -18,10 +28,103 @@ if(!file.exists("data")) {
         dir.create("data")
         
         # download testing and training data sets
-        trainURL <- https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
-        testURL <- https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+        trainURL <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+        testURL <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
         
         download.file(trainURL, destfile = "./data/trainingSet.csv", method = "curl")
         download.file(testURL, destfile = "./data/testingSet.csv", method = "curl")
 }
 ```
+
+
+```{r library_and_seed}
+library(caret)
+# since we will use the "rf" method we can save time by preloading dependencies
+library(randomForest)
+# to allow us to compute multiple groups of trees on seperate cores
+# also known as Parallel computing, we use the foreach and doParallel libraries
+library(foreach)
+library(doParallel)
+library(Hmisc)
+set.seed(1111)
+```
+
+load data into memory
+```{r load_data}
+trainSet <- read.csv("./data/trainingSet.csv", na.strings=c("#DIV/0!"))
+#testSet <- read.csv("./data/testingSet.csv", na.strings=c("#DIV/0!"))
+```
+
+Quickly review the data as such
+```{r data_summary}
+# summary immediately shows many NA values 
+# and the first column X appears to be an index column
+summar(trainSet)
+# This shows our training contains 19622 observations and 160 variables
+dim(trainSet)
+# when we check how many columns are completely full we find 93
+sum(colSums(is.na(trainSet)) == 0)
+```
+
+With more than half the variables completely filled it makes sense to stick to these as our predictors and thus remove any incompleted columns to avoid a few observations heavily affecting the weight it holds on a particular classification.
+Additionally, common sense confirms that columns such as X, an index column, user_name, and a few others provide us with absolutely no predictive value and could only lead toward miss classification and incorrectly fitting to inappropriate variables
+```{r compress_data}
+# coerce remaining values into numeric for ease of computing and comparing model
+for(i in c(1:(ncol(trainSet)-1))) {
+        trainSet[,i] = as.numeric(as.character(trainSet[,i]))
+        }
+#for(i in c(1:ncol(testSet)-1)) {
+#        testSet[,i] = as.numeric(as.character(testSet[,i]))
+#        }
+#to remove user name, repetitive index, and other non informative columns
+trainSet <- trainSet[ ,-c(1:7)]
+#testSet <- testSet[ , -c(1:7)]
+keep <- colnames(trainSet[colSums(is.na(trainSet)) == 0])
+#to remove variables that are not completed
+trainSet <- trainSet[keep]
+# to make sure we dont remove columns from one set and not the other 
+#we use the trainSet index
+#testSet <- testSet[keep]
+```
+
+partition a probe set for cross validation
+Our new Training data will retain 70% of the training set
+and 30% will be set aside for a probe test set, after which we can update
+the model prior to using the testing set
+```{r partition_train_probe}
+inTrain <- createDataPartition(y = trainSet$classe, p = 0.7, list = FALSE)
+train <- trainSet[inTrain, ]
+test <- trainSet[-inTrain, ]
+```
+
+##Train Random Forests models
+With such a large combination of variables and factors and because random forests become so powerful in reducing the variability of their predictions with the use of more trees and forests, it only makes sense to do such a cumbersome and computationally heavy tasks across multiple cores.
+The foreach package as described by Steve Weston went a long way in helping me harness the grammar of executing functions for parallel computation
+please see (this page)[http://cran.r-project.org/web/packages/foreach/vignettes/foreach.pdf] for more information on how I learned to use this package
+The doParallel package is a "parallel backend" for the foreach package - as described by author Steve Weston and Rich Calaway. If you would like to know more about the doParallel package please (check here)[http://cran.r-project.org/web/packages/doParallel/vignettes/gettingstartedParallel.pdf] for a simple introduction to doParallel and how it works with foreach
+```{r}
+# this command will allocate half the computers total number of cores
+registerDoParallel()
+x <- subset(train, select = -classe)
+y <- train$classe
+rfModel <- foreach(ntree = rep(200, 6), .combine = combine, .multicombine = TRUE,
+              .packages = 'randomForest') %dopar% {
+                      randomForest(x, y, ntree=ntree)
+              }
+```
+
+##Create and evaluate Predictions for training and test sets
+```{r}
+trainPred <- predict(rfModel, newdata=train)
+confusionMatrix(trainPred, train$classe)
+
+testPred <- predict(rfModel, newdata=test)
+confusionMatrix(testPred,test$classe)
+```
+
+##Conclusion
+With 99.59% accuracy, the random forest model has shown its great predictive power.
+The biggest caveat being the time it takes the model and then combine these 200 trees in each of the 6 random forests.
+I believe, however, that by using the doParallel library this cost has been significantly reduced.
+Prior to parallel computing, creating the **rfModel** took over 20 minutes.
+With the addition of doParallel running with foreach and particularly once I found the multicombine functionality, this time was able to reduce to below 2 minutes.
