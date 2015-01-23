@@ -1,0 +1,27 @@
+---
+title: "MachineLearningProject"
+author: "Jerad Acosta"
+date: "January 22, 2015"
+output: html_document
+---
+
+```{r set_local_wd}
+setwd('/Users/irJERAD/Courses/Coursera Repo/(C)Practical Machine Learning/PracticalMachineLearning')
+```
+
+Download training and testing datasets and load them into memory
+creating any necessary directories
+```{r download_data}
+# check if data directory exists
+if(!file.exists("data")) {
+        # create directory for datasets 
+        dir.create("data")
+        
+        # download testing and training data sets
+        trainURL <- https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+        testURL <- https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+        
+        download.file(trainURL, destfile = "./data/trainingSet.csv", method = "curl")
+        download.file(testURL, destfile = "./data/testingSet.csv", method = "curl")
+}
+```
