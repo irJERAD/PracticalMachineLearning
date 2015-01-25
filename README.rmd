@@ -51,7 +51,7 @@ set.seed(1111)
 load data into memory
 ```{r load_data}
 trainSet <- read.csv("./data/trainingSet.csv", na.strings=c("#DIV/0!"))
-#testSet <- read.csv("./data/testingSet.csv", na.strings=c("#DIV/0!"))
+testSet <- read.csv("./data/testingSet.csv", na.strings=c("#DIV/0!"))
 ```
 
 Quickly review the data as such
@@ -72,18 +72,21 @@ Additionally, common sense confirms that columns such as X, an index column, use
 for(i in c(1:(ncol(trainSet)-1))) {
         trainSet[,i] = as.numeric(as.character(trainSet[,i]))
         }
-#for(i in c(1:ncol(testSet)-1)) {
-#        testSet[,i] = as.numeric(as.character(testSet[,i]))
-#        }
+for(i in c(1:(ncol(testSet)-1))) {
+        testSet[,i] = as.numeric(as.character(testSet[,i]))
+        }
 #to remove user name, repetitive index, and other non informative columns
 trainSet <- trainSet[ ,-c(1:7)]
-#testSet <- testSet[ , -c(1:7)]
+testSet <- testSet[ , -c(1:7)]
 keep <- colnames(trainSet[colSums(is.na(trainSet)) == 0])
 #to remove variables that are not completed
 trainSet <- trainSet[keep]
 # to make sure we dont remove columns from one set and not the other 
 #we use the trainSet index
-#testSet <- testSet[keep]
+keeptest <- keep
+# change name for problem_id since turning in predictions and we do not have answers yet
+keeptest[53] <- "problem_id"
+testSet <- testSet[keeptest]
 ```
 
 partition a probe set for cross validation
@@ -121,9 +124,22 @@ testPred <- predict(rfModel, newdata=test)
 confusionMatrix(testPred,test$classe)
 ```
 
+```{r for_assignment}
+# This is only for the course project submission part
+submissionPrediction <- predict(rfModel, newdata=testSet)
+confusionMatrix(submissionPrediction, testSet$problem_id)
+```
+
 ##Conclusion
 With 99.59% accuracy, the random forest model has shown its great predictive power.
 The biggest caveat being the time it takes the model and then combine these 200 trees in each of the 6 random forests.
 I believe, however, that by using the doParallel library this cost has been significantly reduced.
 Prior to parallel computing, creating the **rfModel** took over 20 minutes.
 With the addition of doParallel running with foreach and particularly once I found the multicombine functionality, this time was able to reduce to below 2 minutes.
+
+As an additional commendment to this algorithms amazing performance,
+The random forest was able to predict all 20 of the submission problems with 100% accuracy
+on the first time.
+I am very impressed with how easy implementing all a system of such sophistication
+having spend time working on SVD algorithms by hand and knowing very well the tediousness
+that comes with this level of mathematics and its application.
